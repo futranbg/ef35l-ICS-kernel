@@ -52,7 +52,7 @@
 #endif
 #define MAX_VDD_MEM		1325000 /* uV */
 #define MAX_VDD_DIG		1200000 /* uV */
-#define MAX_AXI			 310500 /* KHz */
+#define MAX_AXI			 30500 /* KHz */
 #define SCPLL_LOW_VDD_FMAX	 594000 /* KHz */
 #define SCPLL_LOW_VDD		1000000 /* uV */
 #define SCPLL_NOMINAL_VDD	1100000 /* uV */
@@ -357,7 +357,7 @@ static struct clkctl_acpu_speed acpu_freq_tbl_nom[] = {
 static struct clkctl_acpu_speed acpu_freq_tbl_fast[] = {
   { {1, 1},  192000,  ACPU_PLL_8, 3, 1, 0, 0,    L2(1),   800000, 0x03006000},
   /* MAX_AXI row is used to source CPU cores and L2 from the AFAB clock. */
-  { {0, 0},  MAX_AXI, ACPU_AFAB,  1, 0, 0, 0,    L2(0),   825000, 0x03006000},
+  { {0, 0},  MAX_AXI, ACPU_AFAB,  1, 0, 0, 0,    L2(0),   775000, 0x03006000},
   { {1, 1},  384000,  ACPU_PLL_8, 3, 0, 0, 0,    L2(1),   825000, 0x03006000},
   { {1, 1},  432000,  ACPU_SCPLL, 0, 0, 1, 0x08, L2(1),   850000, 0x03006000},
   { {1, 1},  486000,  ACPU_SCPLL, 0, 0, 1, 0x09, L2(2),   850000, 0x03006000},
@@ -978,15 +978,15 @@ static __init struct clkctl_acpu_speed *select_freq_plan(void)
 			break;
 		}
 	} else if (speed_bin == 0x1) {
-		max_khz = 1512000;
+		max_khz = 1674000;
 		switch (pvs) {
 		case 0x0:
 		case 0x7:
-			acpu_freq_tbl = acpu_freq_tbl_slow;
+			acpu_freq_tbl = acpu_freq_tbl_fast;
 			pr_info("ACPU PVS: Slow\n");
 			break;
 		case 0x1:
-			acpu_freq_tbl = acpu_freq_tbl_nom;
+			acpu_freq_tbl = acpu_freq_tbl_fast;
 			pr_info("ACPU PVS: Nominal\n");
 			break;
 		case 0x3:
@@ -994,8 +994,8 @@ static __init struct clkctl_acpu_speed *select_freq_plan(void)
 			pr_info("ACPU PVS: Fast\n");
 			break;
 		default:
-			acpu_freq_tbl = acpu_freq_tbl_slow;
-			pr_warn("ACPU PVS: Unknown. Defaulting to slow.\n");
+			acpu_freq_tbl = acpu_freq_tbl_fast;
+			pr_warn("ACPU PVS: Unknown. Defaulting to fast.\n");
 			break;
 		}
 	} else {
