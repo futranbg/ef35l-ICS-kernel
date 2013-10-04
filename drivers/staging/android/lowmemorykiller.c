@@ -123,6 +123,11 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	int other_file = global_page_state(NR_FILE_PAGES) -
 						global_page_state(NR_SHMEM);
 	struct zone *zone;
+#ifdef CONFIG_HIGHMEM
+	int normal_file = 0;
+	int normal_shmem = 0;
+	int highmem_file = 0;
+#endif
 
 	if (offlining) {
 		/* Discount all free space in the section being offlined */
@@ -136,6 +141,23 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 			}
 		}
 	}
+
+#ifdef CONFIG_HIGHMEM
+	if ((sc->gfp_mask & __GFP_HIGHMEM) == 0) {
+		for_each_zone(zone) {
+			if (zone_idx(zone) == ZONE_NORMAL) {
+				normal_file += zone_page_state(zone, NR_FILE_PAGES);
+				normal_shmem += zone_page_state(zone, NR_SHMEM);
+			}
+			if (zone_idx(zone) == ZONE_HIGHMEM)
+				highmem_file += zone_page_state(zone, NR_FILE_PAGES);
+		}
+		if(normal_file < highmem_file &&
+			normal_file < (lowmem_minfree[lowmem_minfree_size - 1] / 2))
+			other_file = (normal_file - normal_shmem) * 2;
+	}
+#endif
+
 	/*
 	 * If we already have a death outstanding, then
 	 * bail out right away; indicating to vmscan
@@ -145,9 +167,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	 */
 	if (lowmem_deathpending &&
 	    time_before_eq(jiffies, lowmem_deathpending_timeout))
-	{
 		return 0;
-	}
 
 	if (lowmem_adj_size < array_size)
 		array_size = lowmem_adj_size;
@@ -169,7 +189,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		global_page_state(NR_INACTIVE_ANON) +
 		global_page_state(NR_INACTIVE_FILE);
 	if (sc->nr_to_scan <= 0 || min_adj == OOM_ADJUST_MAX + 1) {
-		lowmem_print(4, "lowmem_shrink %lu, %x, return %d\n",
+		lowmem_print(5, "lowmem_shrink %lu, %x, return %d\n",
 			     sc->nr_to_scan, sc->gfp_mask, rem);
 		return rem;
 	}
@@ -180,8 +200,11 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		struct mm_struct *mm;
 		struct signal_struct *sig;
 		int oom_adj;
+		long task_state = 0; //chjeon20120612@LS1 add
 
 		task_lock(p);
+
+		task_state = p->state;  //chjeon20120612@LS1 add
 		mm = p->mm;
 		sig = p->signal;
 		if (!mm || !sig) {
@@ -195,6 +218,12 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		}
 		tasksize = get_mm_rss(mm);
 		task_unlock(p);
+
+		if ((task_state & TASK_KILLABLE)) //chjeon20120612@LS1 add
+		{
+			continue;
+		}
+
 		if (tasksize <= 0)
 			continue;
 		if (selected) {
@@ -207,18 +236,6 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		selected = p;
 		selected_tasksize = tasksize;
 		selected_oom_adj = oom_adj;
-		 //p10582 2012/05/23 : 1 sec time 전에 메모리 확보 실패 한 경우 예외 처리.
-		if(lowmem_deathpending && selected != lowmem_deathpending)
-		{
-		   if(selected_oom_adj > 5){
-				force_sig(SIGKILL, selected);
-				lowmem_print(1, "time out send sigkill to %d (%s), adj %d, size %d ****\n",
-					 selected->pid, selected->comm,
-					 selected_oom_adj, selected_tasksize);
-				selected=NULL;
-				continue;
-		   }
-		}
 		lowmem_print(2, "select %d (%s), adj %d, size %d, to kill\n",
 			     p->pid, p->comm, oom_adj, tasksize);
 	}
@@ -227,10 +244,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 			     selected->pid, selected->comm,
 			     selected_oom_adj, selected_tasksize);
 		lowmem_deathpending = selected;
-		//p10582 2012/05/23 : 1 sec time 전에 메모리 확보 실패 한 경우 문제 되기 때문에  300 ms 로 조정 함.
-		lowmem_deathpending_timeout = jiffies + (3*HZ/10);
-		//lowmem_deathpending_timeout = jiffies + HZ;
-		
+		lowmem_deathpending_timeout = jiffies + HZ;
 		force_sig(SIGKILL, selected);
 		rem -= selected_tasksize;
 	}
@@ -272,4 +286,3 @@ module_init(lowmem_init);
 module_exit(lowmem_exit);
 
 MODULE_LICENSE("GPL");
-
