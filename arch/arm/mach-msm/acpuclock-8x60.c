@@ -45,14 +45,9 @@
 #define L_VAL_SCPLL_CAL_MIN	0x24 /* =  432 MHz with 27MHz source */
 #define CPU_FREQ_TABLE_SIZE 40
 
-#ifdef CONFIG_SKY_CORE_VOLTAGE
 #define MAX_VDD_SC		1350000 /* uV */
-#define VDD_OFFSET            0//75000
-#else
-#define MAX_VDD_SC		1325000 /* uV */
-#endif
-#define MAX_VDD_MEM		1325000 /* uV */
-#define MAX_VDD_DIG		1200000 /* uV */
+#define MAX_VDD_MEM		1350000 /* uV */
+#define MAX_VDD_DIG		1300000 /* uV */
 #define MAX_AXI			 30500 /* KHz */
 #define SCPLL_LOW_VDD_FMAX	 594000 /* KHz */
 #define SCPLL_LOW_VDD		1000000 /* uV */
@@ -204,6 +199,7 @@ static struct clkctl_l2_speed l2_freq_tbl_v2[] = {
 #endif
 };
 
+#if 0
 #define L2(x) (&l2_freq_tbl_v2[(x)])
 /* SCPLL frequencies = 2 * 27 MHz * L_VAL */
 static struct clkctl_acpu_speed acpu_freq_tbl_1188mhz[] = {
@@ -229,7 +225,6 @@ static struct clkctl_acpu_speed acpu_freq_tbl_1188mhz[] = {
   { {0, 0}, 0 },
 };
 
-#if 0
 /* SCPLL frequencies = 2 * 27 MHz * L_VAL */
 static struct clkctl_acpu_speed acpu_freq_tbl_slowest[] = {
   { {1, 1},  192000,  ACPU_PLL_8, 3, 1, 0, 0,    L2(1),   800000, 0x03006000},
@@ -398,7 +393,7 @@ static struct clkctl_acpu_speed acpu_freq_tbl_fast[] = {
   { {1, 1}, 1566000,  ACPU_SCPLL, 0, 0, 1, 0x1D, L2(20), 1250000, 0x03006000},
   { {1, 1}, 1620000,  ACPU_SCPLL, 0, 0, 1, 0x1E, L2(20), 1250000, 0x03006000},
   { {1, 1}, 1674000,  ACPU_SCPLL, 0, 0, 1, 0x1F, L2(21), 1275000, 0x03006000},
-  { {1, 1}, 1728000,  ACPU_SCPLL, 0, 0, 1, 0x20, L2(21), 1275000, 0x03006000},
+  { {1, 1}, 1728000,  ACPU_SCPLL, 0, 0, 1, 0x20, L2(21), 1275000, 0x03006000}, 
   { {1, 1}, 1782000,  ACPU_SCPLL, 0, 0, 1, 0x21, L2(22), 1300000, 0x03006000},
   { {1, 1}, 1836000,  ACPU_SCPLL, 0, 0, 1, 0x22, L2(23), 1300000, 0x03006000},
   { {1, 1}, 1900000,  ACPU_SCPLL, 0, 0, 1, 0x23, L2(23), 1350000, 0x03006000},
@@ -413,7 +408,7 @@ static struct clkctl_acpu_speed *acpu_freq_tbl;
 static struct clkctl_l2_speed *l2_freq_tbl = l2_freq_tbl_v2;
 static unsigned int l2_freq_tbl_size = ARRAY_SIZE(l2_freq_tbl_v2);
 
-static unsigned long acpuclk_8x60_get_rate(int cpu)
+unsigned long acpuclk_8x60_get_rate(int cpu)
 {
 	return drv_state.current_speed[cpu]->acpuclk_khz;
 }
@@ -952,6 +947,50 @@ static struct notifier_block __cpuinitdata acpuclock_cpu_notifier = {
 	.notifier_call = acpuclock_cpu_callback,
 };
 
+uint32_t acpu_check_khz_value(unsigned long khz)
+{
+	struct clkctl_acpu_speed *f;
+
+#if defined(CONFIG_CPU_OC)
+	if (khz > 1900000)
+		return CONFIG_MSM_CPU_FREQ_MAX;
+#else
+	if (khz > 1512000)
+		return CONFIG_MSM_CPU_FREQ_MAX;
+#endif
+	if (khz < 30000)
+		return CONFIG_MSM_CPU_FREQ_MIN;
+
+	for (f = acpu_freq_tbl_fast; f->acpuclk_khz != 0; f++) {
+		if (khz < 30000) {
+			if (f->acpuclk_khz == (khz*1000))
+				return f->acpuclk_khz;
+			if ((khz*1000) > f->acpuclk_khz) {
+				f++;
+				if ((khz*1000) < f->acpuclk_khz) {
+					f--;
+					return f->acpuclk_khz;
+				}
+				f--;
+			}
+		}
+		if (f->acpuclk_khz == khz) {
+			return 1;
+		}
+		if (khz > f->acpuclk_khz) {
+			f++;
+			if (khz < f->acpuclk_khz) {
+				f--;
+				return f->acpuclk_khz;
+			}
+			f--;
+		}
+	}
+	return 0;
+}
+
+EXPORT_SYMBOL(acpu_check_khz_value);
+
 static __init struct clkctl_acpu_speed *select_freq_plan(void)
 {
 	uint32_t pte_efuse, speed_bin, pvs, max_khz;
@@ -990,7 +1029,7 @@ static __init struct clkctl_acpu_speed *select_freq_plan(void)
 		max_khz = 1900000;
 #else
 		max_khz = 1512000;
-#endif
+#endif		
 		switch (pvs) {
 		case 0x0:
 		case 0x7:
