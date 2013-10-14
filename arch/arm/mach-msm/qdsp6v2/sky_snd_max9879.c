@@ -93,7 +93,7 @@ static int max9879_probe(struct i2c_client *client, const struct i2c_device_id *
 static int __exit max9879_remove(struct i2c_client *client);
 static void max9879_shutdown(struct i2c_client *client);
 
-#if !defined(CONFIG_EF34_BOARD) && !defined(CONFIG_EF35_BOARD)
+#if !defined(CONFIG_EF34_BOARD) && !defined(CONFIG_EF35_BOARD) && !defined(CONFIG_EF33_BOARD)
 /* static */ void snd_extamp_setpath(extamp_inmode_e inpath, extamp_outmode_e outpath, extamp_outfmt_e outfmt);
 static void snd_extamp_setvolume(extamp_outmode_e outpath, uint32_t volume);
 static void snd_extamp_setpreampgain(extamp_inmode_e inpath, u8 val);
@@ -287,7 +287,7 @@ static bool snd_extamp_exception_check(void)
 /*==========================================================================
 ** snd_extamp_exception_check
 **=========================================================================*/
-#if !defined(CONFIG_EF34_BOARD) && !defined(CONFIG_EF35_BOARD)
+#if !defined(CONFIG_EF34_BOARD) && !defined(CONFIG_EF35_BOARD) && !defined(CONFIG_EF33_BOARD)
 static bool snd_extamp_skip_exception_check(int wParam)
 {
     if(!wParam && curMode==MODE_IN_CALL)        {
@@ -599,7 +599,7 @@ void snd_extamp_api_SetPreAmpGain(uint32_t gain)
 /*==========================================================================
 ** snd_extamp_api_SetPath
 **=========================================================================*/
-#if !defined(CONFIG_EF34_BOARD) && !defined(CONFIG_EF35_BOARD)
+#if !defined(CONFIG_EF34_BOARD) && !defined(CONFIG_EF35_BOARD) && !defined(CONFIG_EF33_BOARD)
 /*static*/ void snd_extamp_setpath(extamp_inmode_e inpath, extamp_outmode_e outpath, extamp_outfmt_e outfmt)
 {
 	u8 inregval, outregval = 0;

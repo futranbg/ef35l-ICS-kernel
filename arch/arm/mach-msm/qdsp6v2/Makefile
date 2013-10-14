@@ -19,16 +19,14 @@ obj-y += audio_wma.o audio_wmapro.o audio_aac.o audio_multi_aac.o audio_utils_ai
 obj-$(CONFIG_MSM_ULTRASOUND) += ultrasound/
 obj-y += audio_mp3.o audio_amrnb.o audio_amrwb.o audio_evrc.o audio_qcelp.o amrwb_in.o
 
-# jhkang
-# #if 0
-# #ifdef CONFIG_EF34_BOARD	jhkang
-# obj-y += sky_snd_max9879.o
-# obj-y += mvs_pcm.o
-# obj-y += mvs_amr.o
-# obj-y += amr_transcode.o
-# obj-y += audio_mvs_adv.o
-# obj-y += audio_fileio.o
-# endif
+ifdef CONFIG_EF33_BOARD
+obj-y += sky_snd_max9879.o
+obj-y += mvs_pcm.o
+obj-y += mvs_amr.o
+obj-y += amr_transcode.o
+obj-y += audio_mvs_adv.o
+obj-y += audio_fileio.o
+endif
 
 #jhkang
 obj-$(CONFIG_EF34_BOARD) += sky_snd_max9879.o
