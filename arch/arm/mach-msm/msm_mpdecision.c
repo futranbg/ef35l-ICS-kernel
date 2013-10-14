@@ -34,8 +34,8 @@
 
 #define MPDEC_TAG			"[MPDEC]: "
 #define MSM_MPDEC_STARTDELAY		20000
-#define MSM_MPDEC_DELAY			100
-#define MSM_MPDEC_PAUSE			10000
+#define MSM_MPDEC_DELAY			500
+#define MSM_MPDEC_PAUSE			5000
 
 struct global_attr {
 	struct attribute attr;
@@ -81,7 +81,7 @@ static struct msm_mpdec_tuners {
 /* limit arrays: 1_up, 2_down, 2_up, 3_down, 3_up, 4_down, ...
  * if i=nr_cpu_online, up_index=2*i-2 and down_index=2*i-3, 
  * i>1 for down and i<CONFIG_NR_CPUS for up */ 
-static unsigned int load_limit[2] = {35, 5};
+static unsigned int load_limit[2] = {75, 5};
 static unsigned int time_limit[2] = {90, 450};
 
 bool was_paused = false;
@@ -128,7 +128,7 @@ static int get_slowest_cpu(void) {
 
 static bool mpdec_cpu_down(int cpu) {
 	bool ret;
-	
+
 	ret = cpu_online(cpu);
 	if (ret) {
 		mutex_lock(&per_cpu(msm_mpdec_cpudata, cpu).hotplug_mutex);
@@ -143,7 +143,7 @@ static bool mpdec_cpu_down(int cpu) {
 
 static bool mpdec_cpu_up(int cpu) {
 	bool ret;
-	
+
 	ret = !cpu_online(cpu);
 	if (ret) {
 		mutex_lock(&per_cpu(msm_mpdec_cpudata, cpu).hotplug_mutex);
