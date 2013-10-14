@@ -170,14 +170,15 @@ SYSCALL_DEFINE1(syncfs, int, fd)
  */
 int vfs_fsync_range(struct file *file, loff_t start, loff_t end, int datasync)
 {
-#ifdef CONFIG_DYNAMIC_FSYNC
-	if (unlikely(dyn_fsync_active && !early_suspend_active))
-		return 0;
-	else {
-#endif
 	struct address_space *mapping = file->f_mapping;
 	int err, ret;
 
+#ifdef CONFIG_DYNAMIC_FSYNC
+	if (likely(dyn_fsync_active && !early_suspend_active)) {
+		ret = 0;
+		goto out;
+	} else {
+#endif
 	if (!file->f_op || !file->f_op->fsync) {
 		ret = -EINVAL;
 		goto out;
@@ -194,12 +195,12 @@ int vfs_fsync_range(struct file *file, loff_t start, loff_t end, int datasync)
 	if (!ret)
 		ret = err;
 	mutex_unlock(&mapping->host->i_mutex);
-
-	out:
-		return ret;
 #ifdef CONFIG_DYNAMIC_FSYNC
 	}
 #endif
+
+out:
+	return ret;
 }
 EXPORT_SYMBOL(vfs_fsync_range);
 
@@ -233,7 +234,7 @@ static int do_fsync(unsigned int fd, int datasync)
 SYSCALL_DEFINE1(fsync, unsigned int, fd)
 {
 #ifdef CONFIG_DYNAMIC_FSYNC
-	if (unlikely(dyn_fsync_active && !early_suspend_active))
+	if (likely(dyn_fsync_active && !early_suspend_active))
 		return 0;
 	else
 #endif
@@ -243,7 +244,7 @@ SYSCALL_DEFINE1(fsync, unsigned int, fd)
 SYSCALL_DEFINE1(fdatasync, unsigned int, fd)
 {
 #ifdef CONFIG_DYNAMIC_FSYNC
-	if (unlikely(dyn_fsync_active && !early_suspend_active))
+	if (likely(dyn_fsync_active && !early_suspend_active))
 		return 0;
 	else
 #endif
@@ -318,7 +319,7 @@ SYSCALL_DEFINE(sync_file_range)(int fd, loff_t offset, loff_t nbytes,
 				unsigned int flags)
 {
 #ifdef CONFIG_DYNAMIC_FSYNC
-	if (unlikely(dyn_fsync_active && !early_suspend_active))
+	if (likely(dyn_fsync_active && !early_suspend_active))
 		return 0;
 	else {
 #endif
@@ -422,7 +423,7 @@ SYSCALL_DEFINE(sync_file_range2)(int fd, unsigned int flags,
 				 loff_t offset, loff_t nbytes)
 {
 #ifdef CONFIG_DYNAMIC_FSYNC
-	if (unlikely(dyn_fsync_active && !early_suspend_active))
+	if (likely(dyn_fsync_active && !early_suspend_active))
 		return 0;
 	else
 #endif
